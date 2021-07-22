@@ -65,3 +65,97 @@ export class Lava {
     }
   }
 }
+
+Lava.prototype.size = new Vec(1, 1);
+
+Lava.prototype.collide = function(state) {
+  return new State(state.level, state.actors, "lost");
+};
+
+Lava.prototype.update = function(time, state) {
+  let newPos = this.pos.plus(this.speed.times(time));
+  if (!state.level.touches(newPos, this.size, "wall")) {
+    return new Lava(newPos, this.speed, this.reset);
+  } else if (this.reset) {
+    return new Lava(this.reset, this.speed, this.reset);
+  } else {
+    return new Lava(this.pos, this.speed.times(-1));
+  }
+};
+
+export class Coin {
+  constructor(pos, basePos, wobble) {
+    this.pos = pos;
+    this.basePos = basePos;
+    this.wobble = wobble;
+  }
+
+  get type() {
+    return "coin";
+  }
+
+  static create(pos) {
+    let basePos = pos.plus(new Vec(0.2, 0.1));
+    return new Coin(basePos, basePos, Math.random() * Math.PI * 2);
+  }
+}
+
+Coin.prototype.size = new Vec(0.6, 0.6);
+
+Coin.prototype.collide = function(state) {
+  let filtered = state.actors.filter(a => a !== this);
+  let status = state.status;
+  if (!filtered.some(a => a.type === "coin")) {
+    status = "won";
+  }
+  return new State(state.level, filtered, status);
+};
+
+const wobbleSpeed = 8,
+  wobbleDist = 0.07;
+
+Coin.prototype.update = function(time) {
+  let wobble = this.wobble + time * wobbleSpeed;
+  let wobblePos = Math.sin(wobble) * wobbleDist;
+  return new Coin(
+    this.basePos.plus(new Vec(0, wobblePos)),
+    this.basePos,
+    wobble
+  );
+};
+
+const monsterSpeed = 4;
+
+export class Monster {
+  constructor(pos) {
+    this.pos = pos;
+  }
+
+  get type() {
+    return "monster";
+  }
+
+  static create(pos) {
+    return new Monster(pos.plus(new Vec(0, -1)));
+  }
+
+  update(time, state) {
+    let player = state.player;
+    let speed = (player.pos.x < this.pos.x ? -1 : 1) * time * monsterSpeed;
+    let newPos = new Vec(this.pos.x + speed, this.pos.y);
+    if (state.level.touches(newPos, this.size, "wall")) return this;
+    else return new Monster(newPos);
+  }
+
+  collide(state) {
+    let player = state.player;
+    if (player.pos.y + player.size.y < this.pos.y + 0.5) {
+      let filtered = state.actors.filter(a => a !== this);
+      return new State(state.level, filtered, state.status);
+    } else {
+      return new State(state.level, state.actors, "lost");
+    }
+  }
+}
+
+Monster.prototype.size = new Vec(1.2, 2);
