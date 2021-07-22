@@ -74,3 +74,28 @@ function runLevel(level) {
     runAnimation(frame);
   });
 }
+/**
+ * correr juego
+ * @param {*} plans
+ */
+export async function runGame(plans) {
+  let life = 0;
+  for (let level = 0; level < plans.length; ) {
+    if (level === 0 && life === 0) {
+      life = 3;
+    }
+    console.log(`count of life is ${life}`);
+
+    let status = await runLevel(new Level(plans[level]));
+    if (status === "won") {
+      level++;
+    } else if (status === "lost") {
+      life--;
+      if (life === 0) {
+        level = 0;
+      }
+    }
+  }
+  console.log("You've won!");
+}
+
